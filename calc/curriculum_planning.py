@@ -380,6 +380,211 @@ def find_all_valid_schedules(courses):
     return maximal_schedules
 
 
+def find_all_valid_schedules_with_optional(required_courses, optional_courses):
+    """
+    Find all valid course schedules with required and optional courses.
+    
+    Requirements:
+    - ALL courses in required_courses must be included
+    - Optional courses are added if possible, but schedules without them are also valid
+    - If an optional course has multiple tutorial options that all work, 
+      separate schedules are returned for each option
+    
+    Args:
+        required_courses (list): List of Course objects that must be included
+        optional_courses (list): List of Course objects that are optional
+    
+    Returns:
+        list: List of tuples (course_selection, tutorial_selection) where:
+              - course_selection: list of Course objects (includes all required + some optional)
+              - tutorial_selection: dict mapping course to selected tutorial slot (day_idx, slot_idx)
+    """
+    from itertools import combinations, product
+    
+    def lectures_conflict(course_list):
+        """Check if lectures of courses conflict."""
+        occupied_slots = set()
+        for course in course_list:
+            for day_idx, slot_idx in course.lectures:
+                slot = (day_idx, slot_idx)
+                if slot in occupied_slots:
+                    return True
+                occupied_slots.add(slot)
+        return False
+    
+    def find_valid_tutorial_combinations(course_list):
+        """
+        Find all valid tutorial selections for a list of courses.
+        Returns list of dicts mapping course to selected tutorial slot.
+        """
+        # Get all lecture slots that are occupied
+        occupied_by_lectures = set()
+        for course in course_list:
+            for day_idx, slot_idx in course.lectures:
+                occupied_by_lectures.add((day_idx, slot_idx))
+        
+        # For each course, get available tutorial options (that don't conflict with lectures)
+        tutorial_options = []
+        courses_with_tutorials = []
+        
+        for course in course_list:
+            if course.tutorials:
+                # Filter out tutorials that conflict with lectures
+                available = [t for t in course.tutorials if t not in occupied_by_lectures]
+                if not available:
+                    # No valid tutorial time available for this course
+                    return []
+                tutorial_options.append(available)
+                courses_with_tutorials.append(course)
+            # If course has no tutorials, skip it
+        
+        if not courses_with_tutorials:
+            # No courses have tutorials
+            return [{}]
+        
+        # Generate all combinations of tutorial selections
+        valid_combinations = []
+        for tutorial_combo in product(*tutorial_options):
+            # Check if this combination has conflicts
+            tutorial_slots = set()
+            has_conflict = False
+            
+            for slot in tutorial_combo:
+                if slot in tutorial_slots or slot in occupied_by_lectures:
+                    has_conflict = True
+                    break
+                tutorial_slots.add(slot)
+            
+            if not has_conflict:
+                # Create mapping of course to selected tutorial
+                tutorial_selection = {}
+                for course, tutorial_slot in zip(courses_with_tutorials, tutorial_combo):
+                    tutorial_selection[course] = tutorial_slot
+                valid_combinations.append(tutorial_selection)
+        
+        return valid_combinations
+    
+    def find_valid_tutorial_combinations_with_occupied(course_list, occupied_slots):
+        """
+        Find all valid tutorial selections for a list of courses, given already occupied slots.
+        Returns list of dicts mapping course to selected tutorial slot.
+        """
+        # For each course, get available tutorial options (that don't conflict with occupied slots)
+        tutorial_options = []
+        courses_with_tutorials = []
+        
+        for course in course_list:
+            if course.tutorials:
+                # Filter out tutorials that conflict with occupied slots
+                available = [t for t in course.tutorials if t not in occupied_slots]
+                if not available:
+                    # No valid tutorial time available for this course
+                    return []
+                tutorial_options.append(available)
+                courses_with_tutorials.append(course)
+        
+        if not courses_with_tutorials:
+            # No courses have tutorials
+            return [{}]
+        
+        # Generate all combinations of tutorial selections
+        valid_combinations = []
+        for tutorial_combo in product(*tutorial_options):
+            # Check if this combination has conflicts
+            tutorial_slots = set()
+            has_conflict = False
+            
+            for slot in tutorial_combo:
+                if slot in tutorial_slots or slot in occupied_slots:
+                    has_conflict = True
+                    break
+                tutorial_slots.add(slot)
+            
+            if not has_conflict:
+                # Create mapping of course to selected tutorial
+                tutorial_selection = {}
+                for course, tutorial_slot in zip(courses_with_tutorials, tutorial_combo):
+                    tutorial_selection[course] = tutorial_slot
+                valid_combinations.append(tutorial_selection)
+        
+        return valid_combinations
+    
+    # First, check if required courses have conflicts
+    if lectures_conflict(required_courses):
+        return []  # Cannot satisfy required courses
+    
+    # Find all valid tutorial combinations for required courses
+    required_tutorial_combos = find_valid_tutorial_combinations(required_courses)
+    if not required_tutorial_combos:
+        return []  # Cannot satisfy required courses' tutorials
+    
+    # Now, for each valid tutorial combination of required courses,
+    # try to add optional courses
+    all_valid_schedules = []
+    
+    for required_tutorial_selection in required_tutorial_combos:
+        # Get occupied slots from required courses (lectures + selected tutorials)
+        occupied_slots = set()
+        for course in required_courses:
+            for day_idx, slot_idx in course.lectures:
+                occupied_slots.add((day_idx, slot_idx))
+            if course in required_tutorial_selection:
+                occupied_slots.add(required_tutorial_selection[course])
+        
+        # Try all possible combinations of optional courses (including none)
+        for r in range(len(optional_courses) + 1):
+            for optional_combo in combinations(optional_courses, r):
+                optional_list = list(optional_combo)
+                
+                # If no optional courses, add schedule with just required courses
+                if not optional_list:
+                    full_course_list = required_courses.copy()
+                    full_tutorial_selection = required_tutorial_selection.copy()
+                    all_valid_schedules.append((full_course_list, full_tutorial_selection))
+                    continue
+                
+                # Check if optional courses conflict with required courses or each other
+                # First check lectures
+                if lectures_conflict(optional_list):
+                    continue
+                
+                # Check if optional courses' lectures conflict with occupied slots
+                temp_occupied = occupied_slots.copy()
+                has_lecture_conflict = False
+                for course in optional_list:
+                    for day_idx, slot_idx in course.lectures:
+                        if (day_idx, slot_idx) in temp_occupied:
+                            has_lecture_conflict = True
+                            break
+                        temp_occupied.add((day_idx, slot_idx))
+                    if has_lecture_conflict:
+                        break
+                
+                if has_lecture_conflict:
+                    continue
+                
+                # No lecture conflict, now find valid tutorial combinations for optional courses
+                # considering the occupied slots
+                optional_tutorial_combos = find_valid_tutorial_combinations_with_occupied(
+                    optional_list, temp_occupied
+                )
+                
+                if not optional_tutorial_combos:
+                    # Cannot add these optional courses due to tutorial conflicts
+                    continue
+                
+                for optional_tutorial_selection in optional_tutorial_combos:
+                    # Combine required and optional courses
+                    full_course_list = required_courses + optional_list
+                    full_tutorial_selection = {**required_tutorial_selection, **optional_tutorial_selection}
+                    all_valid_schedules.append((full_course_list, full_tutorial_selection))
+    
+    # Remove duplicates and return
+    # Note: We want all schedules, even if they are subsets, because optional courses
+    # can be included or not, so schedules with fewer optional courses are still valid
+    return all_valid_schedules
+
+
 def print_all_valid_schedules(courses):
     """
     Find and print all valid course schedules where no time slots conflict.
@@ -460,6 +665,69 @@ def print_all_valid_schedules(courses):
             print("\n")
 
 
+def print_all_valid_schedules_with_optional(required_courses, optional_courses):
+    """
+    Find and print all valid course schedules with required and optional courses.
+    
+    Args:
+        required_courses (list): List of Course objects that must be included
+        optional_courses (list): List of Course objects that are optional
+    """
+    valid_schedules = find_all_valid_schedules_with_optional(required_courses, optional_courses)
+    
+    if not valid_schedules:
+        print("No valid schedules found! Required courses have conflicts.")
+        return
+    
+    print(f"Found {len(valid_schedules)} valid schedule(s):\n")
+    
+    for idx, (course_list, tutorial_selection) in enumerate(valid_schedules, 1):
+        print("=" * 100)
+        # Create a summary line with all course codes
+        course_codes = ", ".join([course.course_code for course in course_list])
+        required_codes = ", ".join([course.course_code for course in required_courses])
+        optional_included = [c.course_code for c in course_list if c in optional_courses]
+        optional_codes_str = ", ".join(optional_included) if optional_included else "None"
+        print(f"SCHEDULE #{idx} - {len(course_list)} course(s): [{course_codes}]")
+        print(f"  Required: [{required_codes}]")
+        print(f"  Optional included: [{optional_codes_str}]")
+        print("=" * 100)
+        
+        # Print course details
+        print("\nCourses in this schedule:")
+        for course in course_list:
+            course_type = "Required" if course in required_courses else "Optional"
+            print(f"  • {course.course_code}: {course.course_name} ({course_type})")
+        
+        print("\nCalendar View:")
+        # Create modified course objects with only selected tutorials
+        modified_courses = []
+        for course in course_list:
+            selected_tutorial = tutorial_selection.get(course)
+            if selected_tutorial:
+                # Create a new course with only the selected tutorial
+                modified_course = Course(
+                    course.course_code,
+                    course.course_name,
+                    lectures=course.lectures,
+                    tutorials=[selected_tutorial]
+                )
+            else:
+                # No tutorial for this course
+                modified_course = Course(
+                    course.course_code,
+                    course.course_name,
+                    lectures=course.lectures,
+                    tutorials=[]
+                )
+            modified_courses.append(modified_course)
+        
+        print_calendar_with_course_list(modified_courses)
+        
+        if idx < len(valid_schedules):
+            print("\n")
+
+
 def print_time_slots_reference():
     """Print a reference table for time slots."""
     time_slots = [
@@ -497,6 +765,8 @@ def input_time_slots(slot_type="lecture"):
     time_slots_list = []
     
     print(f"\nPlease input {slot_type} time slots.")
+    if slot_type == "tutorial":
+        print("For tutorials, you can input multiple available time slots, and the plan needs to inlucde only one of them.")
     print_time_slots_reference()
     
     while True:
@@ -570,7 +840,9 @@ if __name__ == "__main__":
     #                 )
 
     course_ls = []
+    optional_course_ls = []
     course_code_ls = []
+    
     while True:
         print(f"\n{'='*60}")
         print(f"Please add your {len(course_code_ls)+1}th course.")
@@ -598,19 +870,25 @@ if __name__ == "__main__":
         
         # Create Course object
         new_course = Course(course_code, course_name, lectures=lectures, tutorials=tutorials)
-        course_ls.append(new_course)
         course_code_ls.append(course_code)
+        
+        is_optional = input("Is this course optional, i.e. you want to include curriculum without this course? (y/n, n by default): \n> ")
+        if is_optional.strip().lower() == "y":
+            optional_course_ls.append(new_course)
+        else:
+            course_ls.append(new_course)
         
         cont = input("\nPress ENTER to add another course; press 'e' to finish: \n> ")
         if cont.strip().lower() == "e":
             break
     
     print(f"\n{'='*60}")
-    print(f"Total courses added: {len(course_ls)}")
+    print(f"Required courses: {len(course_ls)}")
+    print(f"Optional courses: {len(optional_course_ls)}")
     print('='*60)
     
     if course_ls:
-        print_all_valid_schedules(course_ls)
+        print_all_valid_schedules_with_optional(course_ls, optional_course_ls)
     else:
-        print("No courses added. Exiting.")    
+        print("No required courses added. Exiting.")    
     
