@@ -665,67 +665,91 @@ def print_all_valid_schedules(courses):
             print("\n")
 
 
-def print_all_valid_schedules_with_optional(required_courses, optional_courses):
+def print_schedule_by_index(schedule_index, valid_schedules, required_courses, optional_courses):
     """
-    Find and print all valid course schedules with required and optional courses.
+    Print a specific schedule by its index.
+    
+    Args:
+        schedule_index (int): Index of the schedule (1-based)
+        valid_schedules (list): List of valid schedules from find_all_valid_schedules_with_optional
+        required_courses (list): List of required Course objects
+        optional_courses (list): List of optional Course objects
+    """
+    if schedule_index < 1 or schedule_index > len(valid_schedules):
+        print(f"[ERROR] Invalid schedule index. Please enter a number between 1 and {len(valid_schedules)}.")
+        return
+    
+    course_list, tutorial_selection = valid_schedules[schedule_index - 1]
+    
+    print("=" * 100)
+    # Create a summary line with all course codes
+    course_codes = ", ".join([course.course_code for course in course_list])
+    required_codes = ", ".join([course.course_code for course in required_courses])
+    optional_included = [c.course_code for c in course_list if c in optional_courses]
+    optional_codes_str = ", ".join(optional_included) if optional_included else "None"
+    print(f"SCHEDULE #{schedule_index} - {len(course_list)} course(s): [{course_codes}]")
+    print(f"  Required: [{required_codes}]")
+    print(f"  Optional included: [{optional_codes_str}]")
+    print("=" * 100)
+    
+    # Print course details
+    print("\nCourses in this schedule:")
+    for course in course_list:
+        course_type = "Required" if course in required_courses else "Optional"
+        print(f"  • {course.course_code}: {course.course_name} ({course_type})")
+    
+    print("\nCalendar View:")
+    # Create modified course objects with only selected tutorials
+    modified_courses = []
+    for course in course_list:
+        selected_tutorial = tutorial_selection.get(course)
+        if selected_tutorial:
+            # Create a new course with only the selected tutorial
+            modified_course = Course(
+                course.course_code,
+                course.course_name,
+                lectures=course.lectures,
+                tutorials=[selected_tutorial]
+            )
+        else:
+            # No tutorial for this course
+            modified_course = Course(
+                course.course_code,
+                course.course_name,
+                lectures=course.lectures,
+                tutorials=[]
+            )
+        modified_courses.append(modified_course)
+    
+    print_calendar_with_course_list(modified_courses)
+    print()
+
+
+def list_all_valid_schedules(required_courses, optional_courses):
+    """
+    List all valid course schedules with course code lists and indices.
     
     Args:
         required_courses (list): List of Course objects that must be included
         optional_courses (list): List of Course objects that are optional
+    
+    Returns:
+        list: List of tuples (course_list, tutorial_selection) from find_all_valid_schedules_with_optional
     """
     valid_schedules = find_all_valid_schedules_with_optional(required_courses, optional_courses)
     
     if not valid_schedules:
         print("No valid schedules found! Required courses have conflicts.")
-        return
+        return []
     
-    print(f"Found {len(valid_schedules)} valid schedule(s):\n")
+    print(f"\nFound {len(valid_schedules)} valid schedule(s):\n")
     
     for idx, (course_list, tutorial_selection) in enumerate(valid_schedules, 1):
-        print("=" * 100)
-        # Create a summary line with all course codes
         course_codes = ", ".join([course.course_code for course in course_list])
-        required_codes = ", ".join([course.course_code for course in required_courses])
-        optional_included = [c.course_code for c in course_list if c in optional_courses]
-        optional_codes_str = ", ".join(optional_included) if optional_included else "None"
-        print(f"SCHEDULE #{idx} - {len(course_list)} course(s): [{course_codes}]")
-        print(f"  Required: [{required_codes}]")
-        print(f"  Optional included: [{optional_codes_str}]")
-        print("=" * 100)
-        
-        # Print course details
-        print("\nCourses in this schedule:")
-        for course in course_list:
-            course_type = "Required" if course in required_courses else "Optional"
-            print(f"  • {course.course_code}: {course.course_name} ({course_type})")
-        
-        print("\nCalendar View:")
-        # Create modified course objects with only selected tutorials
-        modified_courses = []
-        for course in course_list:
-            selected_tutorial = tutorial_selection.get(course)
-            if selected_tutorial:
-                # Create a new course with only the selected tutorial
-                modified_course = Course(
-                    course.course_code,
-                    course.course_name,
-                    lectures=course.lectures,
-                    tutorials=[selected_tutorial]
-                )
-            else:
-                # No tutorial for this course
-                modified_course = Course(
-                    course.course_code,
-                    course.course_name,
-                    lectures=course.lectures,
-                    tutorials=[]
-                )
-            modified_courses.append(modified_course)
-        
-        print_calendar_with_course_list(modified_courses)
-        
-        if idx < len(valid_schedules):
-            print("\n")
+        print(f"  [{idx}] {course_codes}")
+    
+    print()
+    return valid_schedules
 
 
 def print_time_slots_reference():
@@ -848,6 +872,13 @@ if __name__ == "__main__":
         print(f"Please add your {len(course_code_ls)+1}th course.")
         print('='*60)
         
+        # Display already added course codes
+        if course_code_ls:
+            print(f"\nAlready added courses: {', '.join(course_code_ls)}")
+        else:
+            print("\nNo courses added yet.")
+        print('='*60)
+        
         while True:
             course_code = input("Please input the course code: \n> ").strip()
             if course_code == "":
@@ -871,12 +902,48 @@ if __name__ == "__main__":
         # Create Course object
         new_course = Course(course_code, course_name, lectures=lectures, tutorials=tutorials)
         course_code_ls.append(course_code)
-        
+
         is_optional = input("Is this course optional, i.e. you want to include curriculum without this course? (y/n, n by default): \n> ")
         if is_optional.strip().lower() == "y":
             optional_course_ls.append(new_course)
         else:
             course_ls.append(new_course)
+
+        # Print course information
+        print(f"\n{'='*60}")
+        print(f"Course added successfully!")
+        print(f"Course Code: {new_course.course_code}")
+        print(f"Course Name: {new_course.course_name}")
+        print(f"Is Optional: {'Yes' if is_optional.strip().lower() == 'y' else 'No'}")
+        print(f"Lectures: {len(new_course.lectures)} session(s)")
+        if new_course.lectures:
+            time_slots = [
+                ("Morning 1", "8:30-10:20"),
+                ("Morning 2", "10:30-11:50"),
+                ("Afternoon 1", "13:30-15:20"),
+                ("Afternoon 2", "15:30-16:50"),
+                ("Evening 1", "18:00-18:50"),
+                ("Evening 2", "19:00-19:50"),
+                ("Evening 3", "20:00-20:50"),
+            ]
+            days = ["DAY 1", "DAY 2", "DAY 3", "DAY 4", "DAY 5"]
+            for day_idx, slot_idx in new_course.lectures:
+                print(f"  - {days[day_idx]} {time_slots[slot_idx][0]} ({time_slots[slot_idx][1]})")
+        print(f"Tutorials: {len(new_course.tutorials)} option(s)")
+        if new_course.tutorials:
+            time_slots = [
+                ("Morning 1", "8:30-10:20"),
+                ("Morning 2", "10:30-11:50"),
+                ("Afternoon 1", "13:30-15:20"),
+                ("Afternoon 2", "15:30-16:50"),
+                ("Evening 1", "18:00-18:50"),
+                ("Evening 2", "19:00-19:50"),
+                ("Evening 3", "20:00-20:50"),
+            ]
+            days = ["DAY 1", "DAY 2", "DAY 3", "DAY 4", "DAY 5"]
+            for day_idx, slot_idx in new_course.tutorials:
+                print(f"  - {days[day_idx]} {time_slots[slot_idx][0]} ({time_slots[slot_idx][1]})")
+        print('='*60)
         
         cont = input("\nPress ENTER to add another course; press 'e' to finish: \n> ")
         if cont.strip().lower() == "e":
@@ -888,7 +955,24 @@ if __name__ == "__main__":
     print('='*60)
     
     if course_ls:
-        print_all_valid_schedules_with_optional(course_ls, optional_course_ls)
+        # List all valid schedules
+        valid_schedules = list_all_valid_schedules(course_ls, optional_course_ls)
+        
+        if valid_schedules:
+            # Interactive mode: let user select schedule by index
+            while True:
+                user_input = input("Enter schedule index to view calendar (or 'q' to exit): \n> ").strip().lower()
+                if user_input == 'q':
+                    print("Exiting.")
+                    break
+                try:
+                    schedule_index = int(user_input)
+                    print_schedule_by_index(schedule_index, valid_schedules, course_ls, optional_course_ls)
+                    continue
+                except ValueError:
+                    print("[ERROR] Please enter a valid number or 'q' to exit.")
+                    continue
+
     else:
         print("No required courses added. Exiting.")    
     
