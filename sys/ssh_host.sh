@@ -1,5 +1,10 @@
 #!/bin/bash
 
+echo "==== SSH Host Setup for Ubuntu ===="
+echo "==== Author: Yimeng (Rosalind) ===="
+echo "==== Github Profile: https://github.com/TeenSpirit1107 ===="
+echo "==== Email: yimengteng@link.cuhk.edu.cn ===="
+
 # Ensure root privileges
 if [ "$(id -u)" -ne 0 ]; then
   echo "Please run this script as root (e.g., using sudo)"

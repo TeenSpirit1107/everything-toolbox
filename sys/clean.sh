@@ -13,15 +13,10 @@ get_free_kb() {
     df --output=avail / | tail -n 1
 }
 
-# cat <<EOF
-# ==== System Cleaner for Ubuntu 22.04 ====
-# ==== Author: Rosalind ====
-# ==== Github Profile: https://github.com/TeenSpirit1107 ====
-# EOF
-
-echo "==== System Cleaner for Ubuntu 22.04 ===="
-echo "==== Author: Rosalind ===="
+echo "==== System Cleaner for Ubuntu ===="
+echo "==== Author: Yimeng (Rosalind) ===="
 echo "==== Github Profile: https://github.com/TeenSpirit1107 ===="
+echo "==== Email: yimengteng@link.cuhk.edu.cn ===="
 
 # Initialize an associative array to store space saved
 declare -A space_saved
