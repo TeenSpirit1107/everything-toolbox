@@ -546,7 +546,11 @@ def input_time_slots(slot_type="lecture"):
 
 
 if __name__ == "__main__":
-    
+
+    print("=== Curriculum Planner ===")
+    print("==== Author: Yimeng (Rosalind) ====")
+    print("==== Github Profile: https://github.com/TeenSpirit1107 ====")
+    print("==== Email: yimengteng@link.cuhk.edu.cn ====")
     # Create courses with multiple tutorial options
     # Note: ALL lectures must be attended, but only ONE tutorial time needs to be selected
     
