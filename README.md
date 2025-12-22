@@ -1,4 +1,4 @@
-# Rosalind's Misc Toolbox
+# Everything Toolbox Guidance
 
 **Language / 语言:**
 
@@ -6,9 +6,9 @@
 
 ## ☺️ Introduction
 
-- This toolbox is originally designed for my personal use. It contains a miscellaneous collection of tools, including system cleaning, media handling, console effects, and calculating utilities. Not focused on a specific topic.
+- This toolbox contains a miscellaneous collection of tools, including system cleaning, media handling, console effects, and calculating utilities.
 
-- I use it on Ubuntu 22.04 and 24.04 , but most tools (except `.sh`) probably work on other systems as well.
+- These code are originally written for my personal use. I use it on Ubuntu 22.04 and 24.04 , but most tools (except `.sh`) probably work on other systems as well. If you would like supports for other OS, e.g. Windows, please kindly post an "ISSUE".
 
 ## 🧠 Utilities
 
