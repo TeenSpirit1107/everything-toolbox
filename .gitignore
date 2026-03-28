@@ -1,6 +1,11 @@
 /file_handling/input/
 /file_handling/output/
 
+/sys/output
+
 /todo.md
 
 personal
+
+__pycache__
+*.pyc
