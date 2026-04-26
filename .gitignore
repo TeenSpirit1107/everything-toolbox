@@ -9,3 +9,6 @@ personal
 
 __pycache__
 *.pyc
+
+*/input
+*/output
