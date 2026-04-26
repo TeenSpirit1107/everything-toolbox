@@ -2,8 +2,12 @@ import os
 from PyPDF2 import PdfReader, PdfWriter
 from PyPDF2 import PageObject
 
+# 始终使用本文件所在目录下的 input/ 与 output/，不随运行时的 cwd 变化
+_PDF_HANDLING_DIR = os.path.dirname(os.path.abspath(__file__))
+
+
 def merge_pdfs_to_one_page():
-    input_path = "input"
+    input_path = os.path.join(_PDF_HANDLING_DIR, "input")
     if not os.path.exists(input_path):
         os.mkdir(input_path)
         print(f"Directory '{input_path}' does not exist. Automatically created. Please place your PDF files in it.")
@@ -78,10 +82,11 @@ def merge_pdfs_to_one_page():
         output_path = "merged_output"
     if not output_path.endswith('.pdf'):
         output_path += '.pdf'
-    if not os.path.exists('output'):
-        os.mkdir('output')
+    output_dir = os.path.join(_PDF_HANDLING_DIR, "output")
+    if not os.path.exists(output_dir):
+        os.mkdir(output_dir)
         print("Directory 'output' did not exist and was created.")
-    output_path = os.path.join('output', output_path)
+    output_path = os.path.join(output_dir, output_path)
     with open(output_path, "wb") as output_file:
         writer.write(output_file)
 
