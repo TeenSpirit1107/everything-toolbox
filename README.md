@@ -33,6 +33,10 @@
 - **Partition Entropy**: Computes weighted entropy across partitions (e.g., for decision trees).
 - **Cross Entropy Loss**: Implements cross-entropy loss for model evaluation.
 
+#### `calc/hash.py`
+
+- **HMAC Hash**: Maps integers to deterministic 6-digit codes using HMAC-SHA256.
+
 ### Media Tools (`media/`)
 
 #### `media/pdf_handling.py`
@@ -52,6 +56,10 @@
 - **Timestamped Logs**: Saves logs with timestamps and optional comments to `~/logging/` directory.
 - **Automatic Naming**: Generates filenames in format `MMdd_HHmm_comment.log`.
 
+#### `console/task_scheduler.py`
+
+- **Script Scheduler**: Runs a list of shell scripts in rotation with a configurable wait interval between runs.
+
 ### System Tools (`sys/`)
 
 #### `sys/clean.sh`
@@ -70,17 +78,40 @@
 - **Secure Mode**: Optional IP-based access restriction for enhanced security.
 - **Service Management**: Enables and starts SSH service automatically.
 
+#### `sys/scp-tar.sh`
+
+- **SSH Tar Transfer**: Fast file/directory transfer between local and remote hosts via SSH using tar and gzip compression.
+- **Bidirectional**: Supports upload (local → remote) and download (remote → local).
+- **Progress Display**: Shows transfer progress when `pv` is installed on the local machine.
+- **Flexible Paths**: Supports `server:/path`, `user@server:/path`, and local paths.
+
+#### `sys/check_data_usage.py`
+
+- **Bandwidth Monitor**: Queries the JustMySocks API for bandwidth usage statistics.
+- **CSV Logging**: Optionally saves usage records to `sys/output/data_usage.csv`.
+- **Environment**: Requires the `CHECK_API` environment variable to be set.
+
+#### `sys/check_pid.sh`
+
+- **Process Inspector**: Displays detailed info for given PIDs (executable, cwd, command, user, parent process tree, elapsed time, etc.).
+
 ---
 
 ## 🚀 Getting Started
 
-1. Install the dependencies:
+1. Install Python dependencies:
 
     ```shell
     pip install -r requirements.txt
     ```
 
-2. Some bash files need to be run as root:
+2. On Ubuntu, install `pv` for transfer progress in `sys/scp-tar.sh` (optional but recommended):
+
+    ```shell
+    sudo apt install pv
+    ```
+
+3. Some bash files need to be run as root:
 
     ```shell
     sudo ./file_name.sh
@@ -93,6 +124,9 @@
   - PyPDF2
   - scipy
   - matplotlib
+- `requests` (for `sys/check_data_usage.py`)
+- System packages on Ubuntu:
+  - `pv` — transfer progress display for `sys/scp-tar.sh` (`sudo apt install pv`)
 
 ## 👤 Author
 

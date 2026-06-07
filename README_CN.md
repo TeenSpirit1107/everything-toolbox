@@ -33,6 +33,10 @@
 - **分区熵**：计算跨分区的加权熵（例如，用于决策树）。
 - **交叉熵损失**：实现用于模型评估的交叉熵损失。
 
+#### `calc/hash.py`
+
+- **HMAC 哈希**：使用 HMAC-SHA256 将整数映射为确定性的 6 位数字码。
+
 ### 媒体工具 (`media/`)
 
 #### `media/pdf_handling.py`
@@ -52,6 +56,10 @@
 - **带时间戳的日志**：将带时间戳和可选注释的日志保存到 `~/logging/` 目录。
 - **自动命名**：生成格式为 `MMdd_HHmm_comment.log` 的文件名。
 
+#### `console/task_scheduler.py`
+
+- **脚本调度器**：按列表循环运行 shell 脚本，每次运行后可配置等待间隔。
+
 ### 系统工具 (`sys/`)
 
 #### `sys/clean.sh`
@@ -70,17 +78,40 @@
 - **安全模式**：可选的基于 IP 的访问限制，以增强安全性。
 - **服务管理**：自动启用并启动 SSH 服务。
 
+#### `sys/scp-tar.sh`
+
+- **SSH 压缩传输**：通过 SSH 使用 tar 和 gzip 压缩，在本地与远程主机之间快速传输文件或目录。
+- **双向传输**：支持上传（本地 → 远程）和下载（远程 → 本地）。
+- **进度显示**：在本地安装 `pv` 后可显示传输进度。
+- **灵活路径**：支持 `server:/path`、`user@server:/path` 和本地路径。
+
+#### `sys/check_data_usage.py`
+
+- **带宽监控**：查询 JustMySocks API 获取带宽使用统计。
+- **CSV 记录**：可选择将使用记录保存到 `sys/output/data_usage.csv`。
+- **环境变量**：需要设置 `CHECK_API` 环境变量。
+
+#### `sys/check_pid.sh`
+
+- **进程检查器**：显示指定 PID 的详细信息（可执行文件、工作目录、命令、用户、父进程树、运行时长等）。
+
 ---
 
 ## 🚀 开始使用
 
-1. 安装依赖项：
+1. 安装 Python 依赖项：
 
     ```shell
     pip install -r requirements.txt
     ```
 
-2. 某些 bash 文件需要以 root 权限运行：
+2. 在 Ubuntu 上安装 `pv`，用于 `sys/scp-tar.sh` 的传输进度显示（可选但推荐）：
+
+    ```shell
+    sudo apt install pv
+    ```
+
+3. 某些 bash 文件需要以 root 权限运行：
 
     ```shell
     sudo ./file_name.sh
@@ -93,6 +124,9 @@
   - PyPDF2
   - scipy
   - matplotlib
+- `requests`（用于 `sys/check_data_usage.py`）
+- Ubuntu 系统包：
+  - `pv` — `sys/scp-tar.sh` 的传输进度显示（`sudo apt install pv`）
 
 ## 👤 作者
 
