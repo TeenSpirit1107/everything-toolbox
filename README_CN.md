@@ -44,6 +44,17 @@
 - **合并 PDF**：引导用户从 `input/` 目录中选择 PDF 文件，并将它们合并到 `output/` 目录中的单个文件。
 - **交互式选择**：允许用户交互式选择多个 PDF 并按顺序合并它们。
 
+#### `media/para.py`
+
+- **段落包装**：将纯文本文件的每一行转换为 HTML `<p>` 标签。
+- **空行处理**：空行输出 `<br>`，而不是包在空的 `<p>` 标签中。
+- **默认输出**：未指定输出文件时，写入 `<输入文件名>_paragraphed.<扩展名>`（例如 `article.txt` → `article_paragraphed.txt`）。
+
+    ```shell
+    python3 media/para.py input.txt
+    python3 media/para.py input.txt output.html
+    ```
+
 ### 控制台工具 (`console/`)
 
 #### `console/console_effect.py`

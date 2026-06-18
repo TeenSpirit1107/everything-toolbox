@@ -44,6 +44,17 @@
 - **Merge PDFs**: Guides the user through selecting PDFs from the `input/` directory and merges them into a single file in the `output/` directory.
 - **Interactive Selection**: Allows users to select multiple PDFs interactively and merge them in order.
 
+#### `media/para.py`
+
+- **Paragraph Wrapper**: Converts each line of a plain-text file into an HTML `<p>` tag.
+- **Blank Lines**: Outputs `<br>` for empty lines instead of wrapping them in `<p>`.
+- **Default Output**: If no output file is given, writes to `<input-stem>_paragraphed<suffix>` (e.g. `article.txt` → `article_paragraphed.txt`).
+
+    ```shell
+    python3 media/para.py input.txt
+    python3 media/para.py input.txt output.html
+    ```
+
 ### Console Tools (`console/`)
 
 #### `console/console_effect.py`
