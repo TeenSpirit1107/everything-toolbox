@@ -71,6 +71,16 @@
 
 - **Script Scheduler**: Runs a list of shell scripts in rotation with a configurable wait interval between runs.
 
+#### `console/task_timer.py`
+
+- **One-Shot Timer**: Waits until a target time today, then runs a shell script once and exits.
+- **Required Arguments**: `script_path`, `hour` (0–23), and `minute` (0–59) must be provided on the command line.
+- **Already Passed**: If the target time has already passed today, the script logs a message and exits without running.
+
+    ```shell
+    python3 console/task_timer.py /path/to/script.sh 3 30
+    ```
+
 ### System Tools (`sys/`)
 
 #### `sys/clean.sh`

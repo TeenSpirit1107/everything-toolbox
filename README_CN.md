@@ -71,6 +71,16 @@
 
 - **脚本调度器**：按列表循环运行 shell 脚本，每次运行后可配置等待间隔。
 
+#### `console/task_timer.py`
+
+- **单次定时器**：等待到今天的指定时刻，执行一次 shell 脚本后退出。
+- **必填参数**：命令行必须提供 `script_path`、`hour`（0–23）和 `minute`（0–59）。
+- **时间已过**：若今天的目标时刻已过，脚本会记录提示并退出，不执行目标脚本。
+
+    ```shell
+    python3 console/task_timer.py /path/to/script.sh 3 30
+    ```
+
 ### 系统工具 (`sys/`)
 
 #### `sys/clean.sh`
