@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+# Detect dead SSH connections instead of hanging indefinitely (~3 min without response).
+SSH_OPTS=(
+  -o ServerAliveInterval=30
+  -o ServerAliveCountMax=6
+)
+
 show_usage() {
   cat <<USAGE
 Usage:
@@ -64,7 +70,7 @@ remote_size_bytes() {
   local path_q
   path_q=$(quote_for_remote_shell "$path")
 
-  ssh "$host" "bash -s -- $path_q" <<'REMOTE_SIZE_SCRIPT'
+  ssh "${SSH_OPTS[@]}" "$host" "bash -s -- $path_q" <<'REMOTE_SIZE_SCRIPT'
 set -euo pipefail
 remote_path=$1
 
@@ -109,7 +115,7 @@ make_remote_tar_gz() {
   local path_q
   path_q=$(quote_for_remote_shell "$path")
 
-  ssh "$host" "bash -s -- $path_q" <<'REMOTE_TAR_SCRIPT'
+  ssh "${SSH_OPTS[@]}" "$host" "bash -s -- $path_q" <<'REMOTE_TAR_SCRIPT'
 set -euo pipefail
 remote_path=$1
 
@@ -173,7 +179,7 @@ extract_gzipped_tar_to_remote_destination() {
   local path_q
   path_q=$(quote_for_remote_shell "$path")
 
-  ssh "$host" "bash -s -- $path_q" <<'REMOTE_EXTRACT_SCRIPT'
+  ssh "${SSH_OPTS[@]}" "$host" "bash -s -- $path_q" <<'REMOTE_EXTRACT_SCRIPT'
 set -euo pipefail
 remote_dest=$1
 
