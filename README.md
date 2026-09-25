@@ -37,6 +37,18 @@
 
 - **HMAC Hash**: Maps integers to deterministic 6-digit codes using HMAC-SHA256.
 
+#### `calc/number_systems.py`
+
+- **Interactive number systems**: Menu-driven base, fixed-point, and floating-point conversion in the terminal; enter `x` to go back or exit.
+- **Base conversion**: Convert integers or decimals between bases 2, 8, 10, and 16 (non-terminating fractions end with `...`); source and target bases must differ.
+- **Fixed point (Ua.b / Qa.b)**: Choose unsigned `U` or two's-complement signed `Q`, then set integer bits `a` and fractional bits `b`; decimal ↔ fixed-point bit patterns (`a+b` binary bits, or hex / `0x`-prefixed hex of the same width).
+- **Floating point (IEEE 754 single precision)**: 32-bit layout (1 sign, 8 exponent, 23 fraction); decimal ↔ 32-bit binary or 8-digit hex.
+- **Input validation**: Invalid input is rejected with a retry prompt; after each conversion you can run another.
+
+    ```shell
+    python3 calc/number_systems.py
+    ```
+
 ### Media Tools (`media/`)
 
 #### `media/pdf_handling.py`
