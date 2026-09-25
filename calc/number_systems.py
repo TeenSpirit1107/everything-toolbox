@@ -1,5 +1,6 @@
 import struct
 from collections.abc import Callable
+from dataclasses import dataclass
 from fractions import Fraction
 from typing import TypeVar
 
@@ -217,8 +218,264 @@ def format_ieee754_single(bits: int) -> str:
     )
 
 
+MAX_FIXED_WIDTH = 64
+
+
+@dataclass(frozen=True)
+class FixedPointFormat:
+    signed: bool
+    a: int
+    b: int
+
+    @property
+    def width(self) -> int:
+        return self.a + self.b
+
+    def label(self) -> str:
+        kind = "Q" if self.signed else "U"
+        return f"{kind}{self.a}.{self.b}"
+
+
+def parse_non_negative_int(s: str) -> int | None:
+    value = parse_in_base(s.strip(), 10)
+    if value is None or value < 0:
+        return None
+    return value
+
+
+def parse_decimal_fraction(s: str) -> Fraction | None:
+    s = s.strip()
+    if not s:
+        return None
+    if "." in s:
+        return parse_rational_in_base(s, 10)
+    value = parse_in_base(s, 10)
+    if value is None:
+        return None
+    return Fraction(value)
+
+
+def fraction_round_to_int(value: Fraction) -> int:
+    if value >= 0:
+        n, d = value.numerator, value.denominator
+        return (n + d // 2) // d
+    n, d = (-value).numerator, (-value).denominator
+    return -((n + d // 2) // d)
+
+
+def twos_complement_to_int(raw: int, width: int) -> int:
+    mask = (1 << width) - 1
+    raw &= mask
+    sign_bit = 1 << (width - 1)
+    if raw & sign_bit:
+        return raw - (1 << width)
+    return raw
+
+
+def int_to_twos_complement(value: int, width: int) -> int:
+    return value & ((1 << width) - 1)
+
+
+def fixed_raw_in_range(raw: int, fmt: FixedPointFormat) -> bool:
+    width = fmt.width
+    if fmt.signed:
+        return -(1 << (width - 1)) <= raw < (1 << (width - 1))
+    return 0 <= raw < (1 << width)
+
+
+def decimal_to_fixed_raw(value: Fraction, fmt: FixedPointFormat) -> int | None:
+    if not fmt.signed and value < 0:
+        return None
+    scaled = value * (2**fmt.b)
+    raw = fraction_round_to_int(scaled)
+    if not fixed_raw_in_range(raw, fmt):
+        return None
+    return raw
+
+
+def fixed_raw_to_fraction(raw: int, fmt: FixedPointFormat) -> Fraction:
+    if fmt.signed:
+        signed = twos_complement_to_int(raw, fmt.width)
+        return Fraction(signed, 2**fmt.b)
+    return Fraction(raw, 2**fmt.b)
+
+
+def parse_fixed_point_bits(s: str, width: int) -> int | None:
+    compact = s.strip().replace(" ", "").replace("_", "")
+    if not compact:
+        return None
+    lower = compact.lower()
+    hex_width = (width + 3) // 4
+
+    if lower.startswith("0b"):
+        compact = compact[2:]
+    elif lower.startswith("0x"):
+        compact = compact[2:]
+        if len(compact) != hex_width:
+            return None
+        try:
+            bits = int(compact, 16)
+        except ValueError:
+            return None
+        if bits < 0 or bits >= (1 << width):
+            return None
+        return bits
+
+    if len(compact) == hex_width and all(
+        ch in "0123456789ABCDEFabcdef" for ch in compact
+    ):
+        try:
+            bits = int(compact, 16)
+        except ValueError:
+            return None
+        if bits >= (1 << width):
+            return None
+        return bits
+
+    if len(compact) != width or any(ch not in "01" for ch in compact):
+        return None
+    return int(compact, 2)
+
+
+def format_fixed_point(bits: int, fmt: FixedPointFormat) -> str:
+    width = fmt.width
+    binary = f"{bits & ((1 << width) - 1):0{width}b}"
+    hex_width = (width + 3) // 4
+    hex_repr = f"0x{bits & ((1 << width) - 1):0{hex_width}X}"
+    return f"{binary} ({fmt.label()}, {width}-bit); hex {hex_repr}"
+
+
+def prompt_fixed_point_format() -> FixedPointFormat | None:
+    while True:
+        print("U. Unsigned fixed point (Ua.b)")
+        print("Q. Signed fixed point (Qa.b, two's complement)")
+        print("x. Back / exit this step")
+        kind = input("Select format (U or Q): ").strip()
+        if kind.lower() == "x":
+            return None
+        upper = kind.upper()
+        if upper not in ("U", "Q"):
+            print("Invalid choice. Enter U, Q, or x.")
+            continue
+
+        signed = upper == "Q"
+        a_entry = prompt_validated_input(
+            "Enter a (integer bits): ",
+            parse_non_negative_int,
+            "Invalid a. Enter a non-negative integer.",
+        )
+        if a_entry is None:
+            continue
+        _, a = a_entry
+
+        b_entry = prompt_validated_input(
+            "Enter b (fractional bits): ",
+            parse_non_negative_int,
+            "Invalid b. Enter a non-negative integer.",
+        )
+        if b_entry is None:
+            continue
+        _, b = b_entry
+
+        width = a + b
+        if width < 1:
+            print("Invalid format: a + b must be at least 1.")
+            continue
+        if width > MAX_FIXED_WIDTH:
+            print(f"Invalid format: total width a + b must be at most {MAX_FIXED_WIDTH}.")
+            continue
+        if signed and a < 1:
+            print("Invalid format: Qa.b requires a >= 1 (sign included in integer bits).")
+            continue
+
+        return FixedPointFormat(signed=signed, a=a, b=b)
+
+
 def call_fixed_point_conversion():
-    print("Fixed point conversion is not implemented yet.")
+    fmt = prompt_fixed_point_format()
+    if fmt is None:
+        return
+
+    encoding = "two's complement" if fmt.signed else "unsigned"
+    print(
+        f"Fixed point {fmt.label()} ({fmt.width}-bit, {encoding}): "
+        f"{fmt.a} integer bit(s), {fmt.b} fractional bit(s); "
+        f"binary point after the {fmt.b} least significant bit(s)."
+    )
+
+    width = fmt.width
+    hex_width = (width + 3) // 4
+
+    while True:
+        print("1. Decimal -> fixed point binary")
+        print("2. Fixed point binary -> decimal")
+        print("x. Back / exit this step")
+        direction = input("Select conversion direction: ").strip()
+        if direction.lower() == "x":
+            return
+        if direction not in ("1", "2"):
+            print("Invalid choice. Enter 1, 2, or x.")
+            continue
+
+        if direction == "1":
+            if fmt.signed:
+                invalid_decimal = (
+                    "Invalid input. Enter a decimal in range for "
+                    f"{fmt.label()}, representable with {fmt.b} fractional bits."
+                )
+            else:
+                invalid_decimal = (
+                    "Invalid input. Enter a non-negative decimal in range for "
+                    f"{fmt.label()}, representable with {fmt.b} fractional bits."
+                )
+
+            def parse_decimal_to_fixed(raw: str) -> int | None:
+                value = parse_decimal_fraction(raw)
+                if value is None:
+                    return None
+                raw_int = decimal_to_fixed_raw(value, fmt)
+                if raw_int is None:
+                    return None
+                return int_to_twos_complement(raw_int, width)
+
+            print(
+                "Enter a decimal number (integer or decimal). "
+                "Enter x to go back."
+            )
+            while True:
+                entry = prompt_validated_input(
+                    "Decimal: ",
+                    parse_decimal_to_fixed,
+                    invalid_decimal,
+                )
+                if entry is None:
+                    break
+                raw, bits = entry
+                print(f"{raw} -> {format_fixed_point(bits, fmt)}")
+        else:
+            invalid_bits = (
+                f"Invalid input. Use {width} binary digits, "
+                f"{hex_width} hex digits, or 0x-prefixed hex."
+            )
+
+            def parse_bits(raw: str) -> int | None:
+                return parse_fixed_point_bits(raw, width)
+
+            print(
+                f"Enter {fmt.label()} as {width} binary digits, "
+                f"{hex_width} hex digits, or 0x-prefixed hex. Enter x to go back."
+            )
+            while True:
+                entry = prompt_validated_input(
+                    "Fixed point: ",
+                    parse_bits,
+                    invalid_bits,
+                )
+                if entry is None:
+                    break
+                raw, bits = entry
+                value = fixed_raw_to_fraction(bits, fmt)
+                print(f"{raw} -> {value} ({format_fixed_point(bits, fmt)})")
 
 
 def call_ieee754_single_conversion():
